@@ -1,0 +1,25 @@
+{% extends "layout.html" %}
+{% block content %}
+
+<div class="playlist-detail">
+    <h1>{{ playlist_name }}</h1>
+
+    <img src="{{ playlist_image_url }}" alt="Playlist Cover Image" width="300">
+
+    <img id="aiImage" width="300" style="display:none;">
+    <button id="generateImage" data-playlist-id="{{ playlist_id }}">Generate New Image with AI</button>
+
+    <h2>Visual Theme Suggestion:</h2>
+    <p id="visualDescription"></p>
+
+    <h2>Tracks in Playlist:</h2>
+    <ul>
+        {% for track in tracks %}
+        <li>{{ track['track']['name'] }} by {{ track['track']['artists'][0]['name'] }}</li>
+        {% endfor %}
+    </ul>
+</div>
+
+<script src="{{ url_for('static', filename='js/generate_image.js') }}"></script>
+
+{% endblock %}

@@ -1,5 +1,6 @@
 import requests
 
+
 def get_playlist(playlist_id, access_token):
 
     url = f'https://api.spotify.com/v1/playlists/{playlist_id}'
@@ -34,3 +35,20 @@ def get_user_playlists(user_id, access_token):
     except Exception as e:
         print(f"An error occurred: {str(e)}")
         return None
+
+
+def extract_songs_and_artists(playlist_data):
+    song_titles = []
+    artist_names = []
+
+    for item in playlist_data['tracks']['items']:
+        track = item['track']
+
+        title = track['name']
+        artist_names_list = [artist['name'] for artist in track['artists']]
+
+        song_titles.append(title)
+        artist_names.append(artist_names_list)
+
+    return song_titles, artist_names
+
