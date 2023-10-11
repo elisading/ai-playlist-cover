@@ -73,22 +73,25 @@ def callback():
     return redirect('/playlists')
 
 @app.route('/playlists')
-def get_playlists():
+@app.route('/playlists/<int:page>')
+def get_playlists(page=1):
     if 'access_token' not in session:
         return redirect('/login')
     if datetime.now().timestamp() > session['expires_at']:
         return redirect('/refresh_token')
-    
+
     headers = {
         "Authorization": f"Bearer {session['access_token']}"
     }
 
-    # get user id
+    limit = 10
+    offset = (page - 1) * limit
+
     me_response = requests.get(f"{API_BASE_URL}/me", headers=headers)
     me_data = me_response.json()
     user_id = me_data['id']
 
-    response = requests.get(f"{API_BASE_URL}/me/playlists", headers=headers)
+    response = requests.get(f"{API_BASE_URL}/me/playlists?limit={limit}&offset={offset}", headers=headers)
     playlists_data = response.json()
 
     playlists = []
@@ -106,7 +109,8 @@ def get_playlists():
             }
             playlists.append(playlist)
 
-    return render_template('playlists.html', playlists=playlists)
+    return render_template('playlists.html', playlists=playlists, page=page, total_pages=(playlists_data['total'] // limit) + 1)
+
 
 @app.route('/refresh_token')
 def refresh_token():
@@ -140,7 +144,7 @@ def playlist_detail(playlist_id):
     track_data = utils.get_playlist_tracks(playlist_id, session['access_token'])
     tracks = track_data['items']
 
-    return render_template('playlist_detail.html', tracks=tracks, playlist_name=playlist_name, playlist_image_url=playlist_image_url)
+    return render_template('playlist_detail.html', tracks=tracks, playlist_name=playlist_name, playlist_image_url=playlist_image_url, playlist_id=playlist_id)
 
 @app.route('/playlists/<playlist_id>/generate_image', methods=['POST'])
 def generate_image(playlist_id):
@@ -157,8 +161,8 @@ def generate_image(playlist_id):
         artist_names.append(artist_data['name'])
         artist_genres.extend(artist_data['genres'])
 
-    popular_artists = [item[0] for item in Counter(artist_names).most_common(3)]
-    popular_genres = [item[0] for item in Counter(artist_genres).most_common(3)]
+    popular_artists = [item[0] for item in Counter(artist_names).most_common(5)]
+    popular_genres = [item[0] for item in Counter(artist_genres).most_common(5)]
 
     playlist_data = utils.get_playlist_details(playlist_id, session['access_token'])
     playlist_name = playlist_data['name']
@@ -176,6 +180,20 @@ def generate_image(playlist_id):
 
     return jsonify({"visual_description": visual_description, "image_url": image_url})
 
+
+@app.route('/playlists/<playlist_id>/upload_image', methods=['POST'])
+def upload_image_to_spotify(playlist_id):
+    # Fetch the access_token from session
+    access_token = session['access_token']
+
+    image_url = request.json.get('image_url')
     
+    image_base64 = utils.convert_image_to_base64(image_url)
+    
+    result = utils.upload_to_spotify(playlist_id, image_base64, access_token)
+    
+    return jsonify(result)
+
+
 if __name__ == '__main__':
     app.run(host='0.0.0.0', debug=True)
