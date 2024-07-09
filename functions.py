@@ -1,5 +1,7 @@
 import requests
 
+def get_auth_header(token):
+    return {"Authorization": "Bearer " + token}
 
 def get_playlist(playlist_id, access_token):
 
@@ -7,7 +9,7 @@ def get_playlist(playlist_id, access_token):
     headers = get_auth_header(access_token)
 
     try:
-        response = requests.get(endpoint_url, headers=headers)
+        response = requests.get(url, headers=headers)
         
         if response.status_code == 200:
             playlist_data = response.json()

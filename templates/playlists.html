@@ -1,20 +1,178 @@
-{% extends "layout.html" %}
-{% block content %}
-<h1>Your Playlists</h1>
-{% if page > 1 %}
-<a href="{{ url_for('get_playlists', page=page-1) }}">Previous</a>
-{% endif %}
-{% if page < total_pages %} <a href="{{ url_for('get_playlists', page=page+1) }}">Next</a>
-    {% endif %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>audiart - your playlists</title>
+    <link rel="icon" href="/static/audiart_icon.png" type="image/png">
+    <link href="https://fonts.googleapis.com/css2?family=Merriweather:wght@300;400;700&display=swap" rel="stylesheet">
+    <style>
+        body, html {
+            font-family: 'Merriweather', serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f5f5f5;
+        }
+        .container { 
+            max-width: 1200px; 
+            margin: 0 auto; 
+            padding: 20px; 
+        }
+        .header { 
+            margin-bottom: 30px; 
+        }
+        .title { 
+            font-size: 28px; 
+            font-weight: 700; 
+            margin-bottom: 10px; 
+        }
+        .subtitle { 
+            font-size: 24px; 
+            font-weight: 400; 
+            margin-bottom: 10px; 
+        }
+        .description { 
+            color: #666; 
+            font-size: 16px;
+        }
+        .playlist-container {
+            overflow-x: auto;
+            white-space: nowrap;
+            -webkit-overflow-scrolling: touch;
+            padding-bottom: 10px;
+        }
+        .playlist-grid { 
+            display: inline-flex;
+            gap: 20px; 
+        }
+        .playlist-card { 
+            background-color: white;
+            border-radius: 8px; 
+            overflow: hidden; 
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            transition: transform 0.2s;
+            width: 200px;
+            flex-shrink: 0;
+        }
+        .playlist-card:hover {
+            transform: translateY(-5px);
+        }
+        .playlist-image-container {
+            position: relative;
+            width: 100%;
+            padding-top: 100%; /* 1:1 Aspect Ratio */
+        }
+        .playlist-image { 
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .spotify-icon { 
+            position: absolute; 
+            top: 10px; 
+            left: 10px; 
+            width: 24px; 
+            height: 24px; 
+            background: url('/static/spotify-icon.png') no-repeat; 
+            background-size: contain; 
+        }
+        .playlist-info { 
+            padding: 10px; 
+        }
+        .playlist-title { 
+            font-size: 16px; 
+            font-weight: 700; 
+            margin-bottom: 5px; 
+            color: #333;
+            white-space: normal;
+        }
+        .playlist-description { 
+            font-size: 14px; 
+            color: #666;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            white-space: normal;
+        }
+        .navigation { 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            margin-bottom: 20px; 
+        }
+        .nav-arrows a { 
+            text-decoration: none; 
+            color: #333;
+            font-size: 24px;
+            margin-left: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1 class="title">
+                <img src="{{ url_for('static', filename='audiart_icon.png') }}" alt="Audiart Icon" style="vertical-align: middle; margin-right: 10px; width: 40px; height: 40px;">
+                audiart
+            </h1>
+            <h2 class="subtitle">your playlists</h2>
+            <p class="description">Give your playlists a fresh look with unique cover art! Select one to give it a try.</p>
+        </header>
 
-    <ul>
-        {% for playlist in playlists %}
-        <li>
-            <h3><a href="{{ url_for('playlist_detail', playlist_id=playlist.id) }}">{{ playlist.name }}</a></h3>
-            <p>{{ playlist.description }}</p>
-            <img src="{{ playlist.image_url }}" alt="Playlist Image" width="200">
-            <p>Owner: {{ playlist.owner.display_name }}</p>
-        </li>
-        {% endfor %}
-    </ul>
-    {% endblock %}
+        <div class="navigation">
+            <h3 class="subtitle">All Playlists</h3>
+            <div class="nav-arrows">
+                {% if page > 1 %}
+                <a href="{{ url_for('get_playlists', page=page-1) }}" aria-label="Previous page">←</a>
+                {% endif %}
+                {% if page < total_pages %}
+                <a href="{{ url_for('get_playlists', page=page+1) }}" aria-label="Next page">→</a>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="playlist-container">
+            <div class="playlist-grid">
+                {% for playlist in playlists %}
+                <div class="playlist-card">
+                    <a href="{{ url_for('playlist_detail', playlist_id=playlist.id) }}">
+                        <div class="playlist-image-container">
+                            <img src="{{ playlist.image_url }}" alt="{{ playlist.name }}" class="playlist-image">
+                            <div class="spotify-icon"></div>
+                        </div>
+                        <div class="playlist-info">
+                            <h3 class="playlist-title">{{ playlist.name }}</h3>
+                            <p class="playlist-description">{{ playlist.description }}</p>
+                        </div>
+                    </a>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const container = document.querySelector('.playlist-container');
+            const grid = document.querySelector('.playlist-grid');
+            
+            const cardWidth = 220; // 200px width + 20px gap
+            const containerWidth = container.clientWidth;
+            const visibleCards = Math.floor(containerWidth / cardWidth);
+            const totalCards = grid.children.length;
+            
+            if (totalCards < visibleCards) {
+                const diff = visibleCards - totalCards;
+                for (let i = 0; i < diff; i++) {
+                    const clone = grid.children[i % totalCards].cloneNode(true);
+                    grid.appendChild(clone);
+                }
+            }
+        });
+    </script>
+</body>
+</html>

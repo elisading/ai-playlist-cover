@@ -1,4 +1,4 @@
-from flask import Flask, redirect, request, jsonify, session, render_template
+from flask import Flask, redirect, request, jsonify, session, render_template, send_file
 import requests
 import secrets
 import binascii
@@ -8,6 +8,7 @@ import os
 import openai
 from spotify import utils, openai_utils
 from collections import Counter
+from io import BytesIO
 
 app = Flask(__name__)
 
@@ -20,7 +21,8 @@ openai.api_key = os.getenv("OPENAI_API_KEY")
 
 CLIENT_ID=os.getenv("CLIENT_ID")
 CLIENT_SECRET=os.getenv("CLIENT_SECRET")
-REDIRECT_URI="http://localhost:5000/callback"
+# REDIRECT_URI="http://localhost:5000/callback"
+REDIRECT_URI = "http://127.0.0.1:5000/callback"
 
 AUTH_URL="https://accounts.spotify.com/authorize"
 TOKEN_URL="https://accounts.spotify.com/api/token"
@@ -133,18 +135,34 @@ def refresh_token():
 
         return redirect('/playlists')
     
+# @app.route('/playlists/<playlist_id>')
+# def playlist_detail(playlist_id):
+#     # Fetch playlist details
+#     playlist_data = utils.get_playlist_details(playlist_id, session['access_token'])
+#     playlist_name = playlist_data['name']
+#     playlist_image_url = playlist_data['images'][0]['url'] if playlist_data.get('images') else None
+
+#     # Fetch tracks
+#     track_data = utils.get_playlist_tracks(playlist_id, session['access_token'])
+#     tracks = track_data['items']
+
+#     return render_template('playlist_detail.html', tracks=tracks, playlist_name=playlist_name, playlist_image_url=playlist_image_url, playlist_id=playlist_id)
+
 @app.route('/playlists/<playlist_id>')
 def playlist_detail(playlist_id):
-    # Fetch playlist details
+    access_token = session.get('access_token')
+    if not access_token:
+        return jsonify({"error": "No access token found"}), 401
     playlist_data = utils.get_playlist_details(playlist_id, session['access_token'])
-    playlist_name = playlist_data['name']
+    
+    playlist_name = playlist_data.get('name', 'Unknown Name')
     playlist_image_url = playlist_data['images'][0]['url'] if playlist_data.get('images') else None
 
-    # Fetch tracks
     track_data = utils.get_playlist_tracks(playlist_id, session['access_token'])
     tracks = track_data['items']
 
     return render_template('playlist_detail.html', tracks=tracks, playlist_name=playlist_name, playlist_image_url=playlist_image_url, playlist_id=playlist_id)
+
 
 @app.route('/playlists/<playlist_id>/generate_image', methods=['POST'])
 def generate_image(playlist_id):
@@ -167,33 +185,58 @@ def generate_image(playlist_id):
     playlist_data = utils.get_playlist_details(playlist_id, session['access_token'])
     playlist_name = playlist_data['name']
 
-    visual_description = openai_utils.generate_visual_prompt(popular_artists, popular_genres, playlist_name)
+    visual_description = openai_utils.generate_visual_prompt(popular_artists, popular_genres, playlist_name, tracks)
     
-    image_response = openai.Image.create(
-        prompt=visual_description,
-        n=1,
-        size="256x256",
-    )
+    image_url = openai_utils.generate_image_from_prompt(visual_description)
 
-    image_url = image_response["data"][0]["url"]
     print("Generated Image URL:", image_url);
 
     return jsonify({"visual_description": visual_description, "image_url": image_url})
 
 
+# @app.route('/playlists/<playlist_id>/upload_image', methods=['POST'])
+# def upload_image_to_spotify(playlist_id):
+#     # Fetch the access_token from session
+#     access_token = session['access_token']
+
+#     image_url = request.json.get('image_url')
+    
+#     image_base64 = utils.convert_image_to_base64(image_url)
+    
+#     result = utils.upload_to_spotify(playlist_id, image_base64, access_token)
+    
+#     return jsonify(result)
+
 @app.route('/playlists/<playlist_id>/upload_image', methods=['POST'])
 def upload_image_to_spotify(playlist_id):
-    # Fetch the access_token from session
-    access_token = session['access_token']
+    access_token = session.get('access_token')
+    if not access_token:
+        return jsonify({"error": "No access token found"}), 401
 
     image_url = request.json.get('image_url')
-    
-    image_base64 = utils.convert_image_to_base64(image_url)
-    
-    result = utils.upload_to_spotify(playlist_id, image_base64, access_token)
-    
-    return jsonify(result)
+    if not image_url:
+        return jsonify({"error": "No image URL provided"}), 400
 
+    try:
+        image_base64 = utils.convert_image_to_base64(image_url)
+        result = utils.upload_to_spotify(playlist_id, image_base64, access_token)
+        return jsonify(result)
+    except Exception as e:
+        print(f"Error uploading image: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/download_image')
+def download_image():
+    image_url = request.args.get('url')
+    if not image_url:
+        return "No URL provided", 400
+
+    response = requests.get(image_url)
+    if response.status_code != 200:
+        return "Image could not be retrieved", 404
+
+    image = BytesIO(response.content)
+    return send_file(image, mimetype='image/jpeg', as_attachment=True, attachment_filename='playlist_cover.jpg')
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', debug=True)
+    app.run(host='0.0.0.0', debug=True, use_reloader=True)
