@@ -12,17 +12,14 @@ from io import BytesIO
 
 app = Flask(__name__)
 
-#random_bytes = secrets.token_bytes(32)
-#secret_key_hex = binascii.hexlify(random_bytes).decode()
-#print(secret_key_hex)
 
 app.secret_key = os.getenv("APP_SECRET_KEY")
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
 CLIENT_ID=os.getenv("CLIENT_ID")
 CLIENT_SECRET=os.getenv("CLIENT_SECRET")
-# REDIRECT_URI="http://localhost:5000/callback"
-REDIRECT_URI = "http://127.0.0.1:5000/callback"
+
+REDIRECT_URI = "https://www.audiart.xyz/callback"
 
 AUTH_URL="https://accounts.spotify.com/authorize"
 TOKEN_URL="https://accounts.spotify.com/api/token"
@@ -135,18 +132,6 @@ def refresh_token():
 
         return redirect('/playlists')
     
-# @app.route('/playlists/<playlist_id>')
-# def playlist_detail(playlist_id):
-#     # Fetch playlist details
-#     playlist_data = utils.get_playlist_details(playlist_id, session['access_token'])
-#     playlist_name = playlist_data['name']
-#     playlist_image_url = playlist_data['images'][0]['url'] if playlist_data.get('images') else None
-
-#     # Fetch tracks
-#     track_data = utils.get_playlist_tracks(playlist_id, session['access_token'])
-#     tracks = track_data['items']
-
-#     return render_template('playlist_detail.html', tracks=tracks, playlist_name=playlist_name, playlist_image_url=playlist_image_url, playlist_id=playlist_id)
 
 @app.route('/playlists/<playlist_id>')
 def playlist_detail(playlist_id):
@@ -192,20 +177,6 @@ def generate_image(playlist_id):
     print("Generated Image URL:", image_url);
 
     return jsonify({"visual_description": visual_description, "image_url": image_url})
-
-
-# @app.route('/playlists/<playlist_id>/upload_image', methods=['POST'])
-# def upload_image_to_spotify(playlist_id):
-#     # Fetch the access_token from session
-#     access_token = session['access_token']
-
-#     image_url = request.json.get('image_url')
-    
-#     image_base64 = utils.convert_image_to_base64(image_url)
-    
-#     result = utils.upload_to_spotify(playlist_id, image_base64, access_token)
-    
-#     return jsonify(result)
 
 @app.route('/playlists/<playlist_id>/upload_image', methods=['POST'])
 def upload_image_to_spotify(playlist_id):
