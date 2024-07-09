@@ -13,6 +13,8 @@
       }
     ],
     "functions": {
-        "maxDuration": 10
+        "app.py": {
+          "maxDuration": 30
+        }
       }
   }
