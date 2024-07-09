@@ -209,5 +209,5 @@ def download_image():
     image = BytesIO(response.content)
     return send_file(image, mimetype='image/jpeg', as_attachment=True, attachment_filename='playlist_cover.jpg')
 
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', debug=True, use_reloader=True)
+# if __name__ == '__main__':
+#     app.run(debug=True)
