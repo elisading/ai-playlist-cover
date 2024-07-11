@@ -9,6 +9,7 @@ import openai
 from spotify import utils, openai_utils
 from collections import Counter
 from io import BytesIO
+import logging
 
 app = Flask(__name__)
 
@@ -19,12 +20,13 @@ openai.api_key = os.getenv("OPENAI_API_KEY")
 CLIENT_ID=os.getenv("CLIENT_ID")
 CLIENT_SECRET=os.getenv("CLIENT_SECRET")
 
-REDIRECT_URI = "https://www.audiart.xyz/callback"
+REDIRECT_URI = "https://audiart-debug.vercel.app"
 
 AUTH_URL="https://accounts.spotify.com/authorize"
 TOKEN_URL="https://accounts.spotify.com/api/token"
 API_BASE_URL="https://api.spotify.com/v1"
 
+logging.basicConfig(level=logging.DEBUG)
 
 @app.route('/')
 def index():
@@ -150,33 +152,42 @@ def playlist_detail(playlist_id):
 
 
 @app.route('/playlists/<playlist_id>/generate_image', methods=['POST'])
-def generate_image(playlist_id):
-    print("Generate Image Route Triggered for Playlist ID:", playlist_id);
-    track_data = utils.get_playlist_tracks(playlist_id, session['access_token'])
-    tracks = track_data['items']
+def generate_image_route(playlist_id):
+    logging.debug(f"Generate Image Route Triggered for Playlist ID: {playlist_id}")
+    try:
+        track_data = utils.get_playlist_tracks(playlist_id, session['access_token'])
+        tracks = track_data['items']
 
-    artist_ids = list({track['track']['artists'][0]['id'] for track in tracks})
-    artist_names = []
-    artist_genres = []
+        artist_ids = list({track['track']['artists'][0]['id'] for track in tracks})
 
-    for artist_id in artist_ids:
-        artist_data = utils.get_artist_details(artist_id, session['access_token'])
-        artist_names.append(artist_data['name'])
-        artist_genres.extend(artist_data['genres'])
+        artist_names = []
+        artist_genres = []
+        for artist_id in artist_ids:
+            artist_data = utils.get_artist_details(artist_id, session['access_token'])
+            artist_names.append(artist_data['name'])
+            artist_genres.extend(artist_data['genres'])
 
-    popular_artists = [item[0] for item in Counter(artist_names).most_common(5)]
-    popular_genres = [item[0] for item in Counter(artist_genres).most_common(5)]
+        popular_artists = [item[0] for item in Counter(artist_names).most_common(5)]
+        popular_genres = [item[0] for item in Counter(artist_genres).most_common(5)]
+        logging.debug(f"Popular artists: {popular_artists}")
+        logging.debug(f"Popular genres: {popular_genres}")
 
-    playlist_data = utils.get_playlist_details(playlist_id, session['access_token'])
-    playlist_name = playlist_data['name']
+        # Get playlist details
+        playlist_data = utils.get_playlist_details(playlist_id, session['access_token'])
+        playlist_name = playlist_data['name']
+        logging.debug(f"Playlist name: {playlist_name}")
 
-    visual_description = openai_utils.generate_visual_prompt(popular_artists, popular_genres, playlist_name, tracks)
-    
-    image_url = openai_utils.generate_image_from_prompt(visual_description)
+        visual_description = openai_utils.generate_visual_prompt(popular_artists, popular_genres, playlist_name, tracks)
+        logging.debug(f"Visual prompt generated: {visual_description}")
 
-    print("Generated Image URL:", image_url);
+        logging.debug("Starting image generation")
+        image_url = openai_utils.generate_image_from_prompt(visual_description)
+        logging.debug(f"Image generated: {image_url}")
 
-    return jsonify({"visual_description": visual_description, "image_url": image_url})
+        return jsonify({"visual_description": visual_description, "image_url": image_url})
+    except Exception as e:
+        logging.error(f"Error in generate_image_route: {str(e)}")
+        return jsonify({"error": str(e)}), 500
 
 @app.route('/playlists/<playlist_id>/upload_image', methods=['POST'])
 def upload_image_to_spotify(playlist_id):
