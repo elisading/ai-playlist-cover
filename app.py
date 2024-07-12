@@ -96,8 +96,10 @@ def get_playlists(page=1):
     playlists_data = response.json()
 
     playlists = []
+    playlist_ids = set()
     for playlist_item in playlists_data.get('items', []):
-        if playlist_item['owner']['id'] == user_id:
+        playlist_id = playlist_item.get('id', "Unknown ID")
+        if playlist_item['owner']['id'] == user_id and playlist_id not in playlist_ids:
             playlist = {
                 "name": playlist_item.get('name', "Unknown Name"),
                 "description": playlist_item.get('description', "No Description"),
@@ -109,6 +111,7 @@ def get_playlists(page=1):
                 "image_url": playlist_item['images'][0]['url'] if playlist_item.get('images') else None
             }
             playlists.append(playlist)
+            playlist_ids.add(playlist_id)
 
     return render_template('playlists.html', playlists=playlists, page=page, total_pages=(playlists_data['total'] // limit) + 1)
 
