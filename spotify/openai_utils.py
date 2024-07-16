@@ -15,7 +15,7 @@ def generate_visual_prompt(artists, genres, playlist_name, tracks):
     print("truncated tracks: ", track_artist_names)
     message = [{
         "role": "system",
-        "content": "You are an abstract artist tasked with creating a visual concept for playlist cover art. Describe an abstract, mood-evoking scene that captures the essence of the playlist without referencing specific objects, people, or text. Focus on colors, textures, patterns, and overall atmosphere. Keep your description concise, under 100 words, and avoid mentioning any song titles or artist names."
+        "content": "You are an abstract artist tasked with creating a visual concept for playlist cover art. Describe an abstract, mood-evoking scene that captures the essence of the playlist without referencing specific objects, people, or text. Focus on colors, textures, patterns, and overall atmosphere. Keep your description concise, under 100 words, and avoid mentioning any song titles or artist names. Keep the language simple without overusing adjectives and adverbs."
 
     }, {
         "role": "user",

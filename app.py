@@ -10,6 +10,7 @@ from spotify import utils, openai_utils
 from collections import Counter
 from io import BytesIO
 import logging
+import random
 
 app = Flask(__name__)
 
@@ -20,7 +21,8 @@ openai.api_key = os.getenv("OPENAI_API_KEY")
 CLIENT_ID=os.getenv("CLIENT_ID")
 CLIENT_SECRET=os.getenv("CLIENT_SECRET")
 
-REDIRECT_URI = "https://audiart-git-debugging-elisadings-projects.vercel.app/callback"
+# REDIRECT_URI = "https://audiart-git-debugging-elisadings-projects.vercel.app/callback"
+REDIRECT_URI = "http://127.0.0.1:5000/callback"
 
 AUTH_URL="https://accounts.spotify.com/authorize"
 TOKEN_URL="https://accounts.spotify.com/api/token"
@@ -151,7 +153,11 @@ def playlist_detail(playlist_id):
     track_data = utils.get_playlist_tracks(playlist_id, session['access_token'])
     tracks = track_data['items']
 
-    return render_template('playlist_detail.html', tracks=tracks, playlist_name=playlist_name, playlist_image_url=playlist_image_url, playlist_id=playlist_id)
+    cat_gifs = ['cats1.gif', 'cats2.gif', 'cats3.gif', 'cats4.gif', 'cats5.gif', 'cats6.gif', 'cats7.gif', 'cats8.gif']
+    random_cat = random.choice(cat_gifs)
+    logging.debug(f"CHOOSING CAT: {random_cat}")
+
+    return render_template('playlist_detail.html', tracks=tracks, playlist_name=playlist_name, playlist_image_url=playlist_image_url, playlist_id=playlist_id, cat_gifs=cat_gifs)
 
 
 @app.route('/playlists/<playlist_id>/generate_image', methods=['POST'])
@@ -172,8 +178,6 @@ def generate_image_route(playlist_id):
 
         popular_artists = [item[0] for item in Counter(artist_names).most_common(5)]
         popular_genres = [item[0] for item in Counter(artist_genres).most_common(5)]
-        logging.debug(f"Popular artists: {popular_artists}")
-        logging.debug(f"Popular genres: {popular_genres}")
 
         # Get playlist details
         playlist_data = utils.get_playlist_details(playlist_id, session['access_token'])
@@ -223,5 +227,6 @@ def download_image():
     image = BytesIO(response.content)
     return send_file(image, mimetype='image/jpeg', as_attachment=True, attachment_filename='playlist_cover.jpg')
 
-# if __name__ == '__main__':
-#     app.run(debug=True)
+if __name__ == '__main__':
+    # app.run(debug=True)
+    app.run(host='0.0.0.0', debug=True, use_reloader=True)

@@ -191,10 +191,21 @@
             </div>
 
             <div class="column">
-                <div class="playlist-card">
+                <!-- <div class="playlist-card">
                     <div class="playlist-image-container">
                         <div id="imageLoader" class="loader" style="display: none;"></div>
                         <img id="aiImage" src="/static/audiart_icon.png" alt="AI Generated Cover" class="playlist-image">
+                    </div>
+                    <div class="playlist-info">
+                        <h3 class="playlist-title">yassified {{ playlist_name }}</h3>
+                    </div>
+                </div> -->
+                <div class="playlist-card">
+                    <div class="playlist-image-container" style="position: relative;">
+                        <div id="catLoader" style="display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: white; z-index: 10;">
+                            <img id="catGif" src="" alt="Loading..." style="width: 100%; height: 100%; object-fit: cover;">
+                        </div>
+                        <img id="aiImage" src="/static/audiart_icon.png" alt="AI Generated Cover" class="playlist-image" style="display: block;">
                     </div>
                     <div class="playlist-info">
                         <h3 class="playlist-title">yassified {{ playlist_name }}</h3>
