@@ -6,7 +6,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const uploadButton = document.getElementById('uploadToSpotify');
     const visualDescription = document.getElementById('visualDescription');
     const catGif = document.getElementById('catGif');
-    const catGifs = ['cats1.gif', 'cats2.gif', 'cats3.gif', 'cats4.gif', 'cats5.gif', 'cats6.gif', 'cats7.gif', 'cats8.gif'];
+    const catGifs = ['cats1.gif', 'cats2.gif', 'cats3.gif', 'cats4.gif'];
 
     generateButton.addEventListener('click', function() {
         const playlistId = this.dataset.playlistId;

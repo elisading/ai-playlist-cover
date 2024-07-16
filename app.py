@@ -154,7 +154,7 @@ def playlist_detail(playlist_id):
     track_data = utils.get_playlist_tracks(playlist_id, session['access_token'])
     tracks = track_data['items']
 
-    cat_gifs = ['cats1.gif', 'cats2.gif', 'cats3.gif', 'cats4.gif', 'cats5.gif', 'cats6.gif', 'cats7.gif', 'cats8.gif']
+    cat_gifs = ['cats1.gif', 'cats2.gif', 'cats3.gif', 'cats4.gif']
     random_cat = random.choice(cat_gifs)
     logging.debug(f"CHOOSING CAT: {random_cat}")
 
