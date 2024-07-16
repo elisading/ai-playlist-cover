@@ -46,7 +46,7 @@ def upload_to_spotify(playlist_id, image_base64, access_token):
         "Authorization": f"Bearer {access_token}",
         "Content-Type": "image/jpeg"
     }
-    response = requests.put(f"{API_BASE_URL}/playlists/{playlist_id}/images", headers=headers, data=image_base64.encode('utf-8'), verify=False)
+    response = requests.put(f"{API_BASE_URL}/playlists/{playlist_id}/images", headers=headers, data=image_base64.encode('utf-8'))
     print(f"Response Code: {response.status_code}")
     print(f"Response Content: {response.text}")
     return response.json()

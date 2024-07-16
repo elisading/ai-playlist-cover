@@ -9,6 +9,7 @@ import openai
 from spotify import utils, openai_utils
 from collections import Counter
 from io import BytesIO
+import io
 import logging
 import random
 
@@ -21,8 +22,8 @@ openai.api_key = os.getenv("OPENAI_API_KEY")
 CLIENT_ID=os.getenv("CLIENT_ID")
 CLIENT_SECRET=os.getenv("CLIENT_SECRET")
 
-# REDIRECT_URI = "https://audiart-git-debugging-elisadings-projects.vercel.app/callback"
-REDIRECT_URI = "http://127.0.0.1:5000/callback"
+REDIRECT_URI = "https://audiart-git-debugging-elisadings-projects.vercel.app/callback"
+# REDIRECT_URI = "http://127.0.0.1:5000/callback"
 
 AUTH_URL="https://accounts.spotify.com/authorize"
 TOKEN_URL="https://accounts.spotify.com/api/token"
@@ -227,6 +228,13 @@ def download_image():
     image = BytesIO(response.content)
     return send_file(image, mimetype='image/jpeg', as_attachment=True, attachment_filename='playlist_cover.jpg')
 
-if __name__ == '__main__':
-    # app.run(debug=True)
-    app.run(host='0.0.0.0', debug=True, use_reloader=True)
+
+@app.route('/proxy_image')
+def proxy_image():
+    url = request.args.get('url')
+    response = requests.get(url)
+    return send_file(io.BytesIO(response.content), mimetype=response.headers['Content-Type'])
+
+# if __name__ == '__main__':
+#     app.run(debug=True)
+    # app.run(host='0.0.0.0', debug=True, use_reloader=True)

@@ -21,9 +21,6 @@ document.addEventListener('DOMContentLoaded', function() {
         downloadButton.style.display = 'none';
         uploadButton.style.display = 'none';
         
-        console.log("Cat loader display:", catLoader.style.display);
-        console.log("AI Image display:", aiImage.style.display);
-        console.log("Cat GIF source:", catGif.src);
         
         fetch(`/playlists/${playlistId}/generate_image`, { method: 'POST' })
             .then(response => response.json())
@@ -80,7 +77,8 @@ function uploadImageToSpotify(playlistId, imageUrl) {
 }
 
 function downloadImageDirectly(imageUrl) {
-    fetch(imageUrl)
+    const proxyUrl = `/proxy_image?url=${encodeURIComponent(imageUrl)}`;
+    fetch(proxyUrl)
         .then(response => response.blob())
         .then(blob => {
             const url = window.URL.createObjectURL(blob);
