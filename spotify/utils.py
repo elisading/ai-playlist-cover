@@ -62,7 +62,7 @@ def compress_image(image_data, max_size_kb=256, initial_width=512, initial_heigh
 
     with Image.open(io.BytesIO(image_data)) as img:
         img_format = img.format
-        img = img.resize((initial_width, initial_height), Image.ANTIALIAS)
+        img = img.resize((initial_width, initial_height), Image.LANCZOS)
         output = io.BytesIO()
         quality = 85
         img.save(output, format=img_format, quality=quality)
@@ -73,11 +73,11 @@ def compress_image(image_data, max_size_kb=256, initial_width=512, initial_heigh
             img.save(output, format=img_format, quality=quality)
 
         compressed_size_kb = output.tell() / 1024
-        logging.info(f"Compressed image size at 512x512: {compressed_size_kb:.2f} KB")
+        logging.info(f"Compressed image size at {initial_width}x{initial_height}: {compressed_size_kb:.2f} KB")
 
         if compressed_size_kb > max_size_kb:
             logging.info("Resizing to 256x256 for further compression")
-            img = img.resize((256, 256), Image.ANTIALIAS)
+            img = img.resize((256, 256), Image.LANCZOS)
             output = io.BytesIO()
             quality = 85
             img.save(output, format=img_format, quality=quality)
