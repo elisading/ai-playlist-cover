@@ -22,8 +22,7 @@ openai.api_key = os.getenv("OPENAI_API_KEY")
 CLIENT_ID=os.getenv("CLIENT_ID")
 CLIENT_SECRET=os.getenv("CLIENT_SECRET")
 
-REDIRECT_URI = "https://audiart-git-debugging-elisadings-projects.vercel.app/callback"
-# REDIRECT_URI = "http://127.0.0.1:5000/callback"
+REDIRECT_URI = "https://www.audiart.xyz/callback"
 
 AUTH_URL="https://accounts.spotify.com/authorize"
 TOKEN_URL="https://accounts.spotify.com/api/token"
