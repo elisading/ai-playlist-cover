@@ -90,6 +90,7 @@ def get_playlists(page=1):
 
     limit = 10
     offset = (page - 1) * limit
+    logging.debug(f"Fetching playlists with limit={limit} and offset={offset}")
 
     me_response = requests.get(f"{API_BASE_URL}/me", headers=headers)
     me_data = me_response.json()
@@ -97,11 +98,13 @@ def get_playlists(page=1):
 
     response = requests.get(f"{API_BASE_URL}/me/playlists?limit={limit}&offset={offset}", headers=headers)
     playlists_data = response.json()
+    logging.debug(f"Total playlists fetched: {len(playlists_data.get('items', []))}")
 
     playlists = []
     playlist_ids = set()
     for playlist_item in playlists_data.get('items', []):
         playlist_id = playlist_item.get('id', "Unknown ID")
+        logging.debug(f"Processing playlist ID: {playlist_id}")
         if playlist_item['owner']['id'] == user_id and playlist_id not in playlist_ids:
             playlist = {
                 "name": playlist_item.get('name', "Unknown Name"),
@@ -115,8 +118,13 @@ def get_playlists(page=1):
             }
             playlists.append(playlist)
             playlist_ids.add(playlist_id)
+            logging.debug(f"Added playlist: {playlist}")
 
-    return render_template('playlists.html', playlists=playlists, page=page, total_pages=(playlists_data['total'] // limit) + 1)
+    total_playlists = playlists_data['total']
+    total_pages = (total_playlists // limit) + (1 if total_playlists % limit > 0 else 0)
+    logging.debug(f"Total pages: {total_pages}")
+
+    return render_template('playlists.html', playlists=playlists, page=page, total_pages=total_pages)
 
 
 @app.route('/refresh_token')
@@ -154,7 +162,7 @@ def playlist_detail(playlist_id):
     track_data = utils.get_playlist_tracks(playlist_id, session['access_token'])
     tracks = track_data['items']
 
-    cat_gifs = ['cats1.gif', 'cats2.gif', 'cats3.gif', 'cats4.gif']
+    cat_gifs = ['cats1.gif', 'cats2.gif', 'cats3.gif', 'cats4.gif','cats5.gif', 'cats6.gif', 'cats7.gif']
     random_cat = random.choice(cat_gifs)
     logging.debug(f"CHOOSING CAT: {random_cat}")
 
@@ -209,8 +217,12 @@ def upload_image_to_spotify(playlist_id):
 
     try:
         image_base64 = utils.convert_image_to_base64(image_url)
+        logging.debug(f"Image size after compression: {len(image_base64) // 1024} KB")
         result = utils.upload_to_spotify(playlist_id, image_base64, access_token)
-        return jsonify(result)
+        if result.status_code == 202:
+            return jsonify({"success": True, "message": "Image upload accepted by Spotify"}), 202
+        else:
+            return jsonify({"error": "Failed to upload image to Spotify", "details": result.text}), result.status_code
     except Exception as e:
         print(f"Error uploading image: {str(e)}")
         return jsonify({"error": str(e)}), 500
