@@ -1,7 +1,7 @@
 from flask import Flask, redirect, request, jsonify, session, render_template, send_file
 import requests
-import secrets
-import binascii
+# import secrets
+# import binascii
 import urllib.parse
 from datetime import datetime, timedelta
 import os
@@ -12,6 +12,7 @@ from io import BytesIO
 import io
 import logging
 import random
+import time
 
 app = Flask(__name__)
 
@@ -29,6 +30,9 @@ TOKEN_URL="https://accounts.spotify.com/api/token"
 API_BASE_URL="https://api.spotify.com/v1"
 
 logging.basicConfig(level=logging.DEBUG)
+
+def is_token_expired():
+    return datetime.now().timestamp() > session.get('expires_at', 0)
 
 @app.route('/')
 def index():
@@ -55,7 +59,8 @@ def login():
 @app.route('/callback')
 def callback():
     if 'error' in request.args:
-        return jsonify({"error": request.args['error']})
+        logging.error(f"Spotify authorization error: {request.args['error']}")
+        return jsonify({"error": request.args['error']}), 400
     
     if 'code' in request.args:
         request_body = {
@@ -66,21 +71,46 @@ def callback():
             "client_secret": CLIENT_SECRET
         }
 
-    response = requests.post(TOKEN_URL, data=request_body)
-    token_info = response.json()
+        try:
+            response = requests.post(TOKEN_URL, data=request_body)
+            time.sleep(1)
 
-    session['access_token'] = token_info['access_token']
-    session['refresh_token'] = token_info['refresh_token']
-    session['expires_at'] = datetime.now().timestamp() + token_info['expires_in']
+            if response.status_code != 200:
+                logging.error(f"Failed to exchange token: {response.status_code} - {response.text}")
+                return jsonify({"error": "Failed to exchange authorization code for tokens"}), response.status_code
+            
+            token_info = response.json()
+            logging.debug(f"Token info received: {token_info}")
+            
+            if 'access_token' not in token_info:
+                logging.error("No access token returned in response")
+                return jsonify({"error": "Failed to receive access token"}), 500
+            
+            session['access_token'] = token_info['access_token']
+            session['refresh_token'] = token_info['refresh_token']
+            session['expires_at'] = datetime.now().timestamp() + token_info['expires_in']
 
-    return redirect('/playlists')
+            logging.info("User successfully authenticated and tokens saved in session")
+            return redirect('/playlists')
+        
+        except requests.exceptions.RequestException as e:
+            logging.error(f"Error during token exchange: {str(e)}")
+            return jsonify({"error": "Token exchange failed"}), 500
+
+    else:
+        logging.error("No authorization code in callback request")
+        return jsonify({"error": "Missing authorization code"}), 400
+
 
 @app.route('/playlists')
 @app.route('/playlists/<int:page>')
 def get_playlists(page=1):
     if 'access_token' not in session:
+        logging.error("No access token in session, redirecting to login")
         return redirect('/login')
-    if datetime.now().timestamp() > session['expires_at']:
+    
+    if is_token_expired():
+        logging.info("Access token expired, refreshing token")
         return redirect('/refresh_token')
 
     headers = {
