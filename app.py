@@ -12,7 +12,6 @@ from io import BytesIO
 import io
 import logging
 import random
-import time
 
 app = Flask(__name__)
 
@@ -73,7 +72,6 @@ def callback():
 
         try:
             response = requests.post(TOKEN_URL, data=request_body)
-            time.sleep(1)
 
             if response.status_code != 200:
                 logging.error(f"Failed to exchange token: {response.status_code} - {response.text}")
@@ -87,6 +85,7 @@ def callback():
                 return jsonify({"error": "Failed to receive access token"}), 500
             
             session['access_token'] = token_info['access_token']
+            logging.debug(f"Access token: {session['access_token']}")
             session['refresh_token'] = token_info['refresh_token']
             session['expires_at'] = datetime.now().timestamp() + token_info['expires_in']
 
@@ -122,7 +121,16 @@ def get_playlists(page=1):
     logging.debug(f"Fetching playlists with limit={limit} and offset={offset}")
 
     me_response = requests.get(f"{API_BASE_URL}/me", headers=headers)
-    me_data = me_response.json()
+    if me_response.status_code != 200:
+        logging.error(f"Failed to fetch user data: {me_response.status_code} - {me_response.text}")
+        return jsonify({"error": "Failed to fetch user data"}), me_response.status_code
+
+    try:
+        me_data = me_response.json()
+    except requests.exceptions.JSONDecodeError as e:
+        logging.error(f"JSON decode error: {str(e)} - Response content: {me_response.text}")
+        return jsonify({"error": "Failed to decode user data"}), 500
+
     user_id = me_data['id']
 
     response = requests.get(f"{API_BASE_URL}/me/playlists?limit={limit}&offset={offset}", headers=headers)
