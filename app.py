@@ -48,7 +48,7 @@ def login():
         "scope": scope,
         "redirect_uri": REDIRECT_URI,
         # omit for final ver, for testing only
-        "show_dialog": True
+        # "show_dialog": True
     }
 
     auth_url = f"{AUTH_URL}/?{urllib.parse.urlencode(params)}"
@@ -71,7 +71,7 @@ def callback():
         }
 
         try:
-            response = requests.post(TOKEN_URL, data=request_body)
+            response = requests.post(TOKEN_URL, data=request_body, timeout=10)
 
             if response.status_code != 200:
                 logging.error(f"Failed to exchange token: {response.status_code} - {response.text}")
@@ -169,21 +169,36 @@ def refresh_token():
     if 'refresh_token' not in session:
         return redirect('/login')
     
-    if datetime.now().timestamp() > session['expires_at']:
-        request_body = {
-            "grant_type": "refresh_token",
-            "refresh_token": session['refresh_token'],
-            "client_id": CLIENT_ID,
-            "client_secret": CLIENT_SECRET
-        }
+    # Check if token is NOT expired
+    if datetime.now().timestamp() < session['expires_at']:
+        return redirect('/playlists')  # Token still valid, no refresh needed
+    
+    # Token is expired, proceed with refresh
+    request_body = {
+        "grant_type": "refresh_token",
+        "refresh_token": session['refresh_token'],
+        "client_id": CLIENT_ID,
+        "client_secret": CLIENT_SECRET
+    }
 
-        response = requests.post(TOKEN_URL, data=request_body)
+    try:
+        response = requests.post(TOKEN_URL, data=request_body, timeout=10)
+        
+        if response.status_code != 200:
+            # Clear session and redirect to login if refresh fails
+            session.clear()
+            return redirect('/login')
+        
         token_info = response.json()
-
         session['access_token'] = token_info['access_token']
         session['expires_at'] = datetime.now().timestamp() + token_info['expires_in']
-
+        
         return redirect('/playlists')
+        
+    except:
+        # Clear session on any error
+        session.clear()
+        return redirect('/login')
     
 
 @app.route('/playlists/<playlist_id>')
