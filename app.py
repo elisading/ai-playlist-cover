@@ -5,24 +5,24 @@ import requests
 import urllib.parse
 from datetime import datetime, timedelta
 import os
-import openai
 from spotify import utils, openai_utils
 from collections import Counter
 from io import BytesIO
 import io
 import logging
 import random
+import base64
 
 app = Flask(__name__)
 
 
 app.secret_key = os.getenv("APP_SECRET_KEY")
-openai.api_key = os.getenv("OPENAI_API_KEY")
 
 CLIENT_ID=os.getenv("CLIENT_ID")
 CLIENT_SECRET=os.getenv("CLIENT_SECRET")
 
 REDIRECT_URI = "https://www.audiart.xyz/callback"
+# REDIRECT_URI = "http://127.0.0.1:5000/callback"
 
 AUTH_URL="https://accounts.spotify.com/authorize"
 TOKEN_URL="https://accounts.spotify.com/api/token"
@@ -210,6 +210,12 @@ def playlist_detail(playlist_id):
 def generate_image_route(playlist_id):
     logging.debug(f"Generate Image Route Triggered for Playlist ID: {playlist_id}")
     try:
+        # Get theme from request body
+        theme = 'abstract'  # default
+        if request.json and 'theme' in request.json:
+            theme = request.json['theme']
+        logging.debug(f"Theme selected: {theme}")
+
         track_data = utils.get_playlist_tracks(playlist_id, session['access_token'])
         tracks = track_data['items']
 
@@ -230,14 +236,17 @@ def generate_image_route(playlist_id):
         playlist_name = playlist_data['name']
         logging.debug(f"Playlist name: {playlist_name}")
 
-        visual_description = openai_utils.generate_visual_prompt(popular_artists, popular_genres, playlist_name, tracks)
+        visual_description = openai_utils.generate_visual_prompt(popular_artists, popular_genres, playlist_name, tracks, theme)
         logging.debug(f"Visual prompt generated: {visual_description}")
 
         logging.debug("Starting image generation")
-        image_url = openai_utils.generate_image_from_prompt(visual_description)
-        logging.debug(f"Image generated: {image_url}")
+        image_base64 = openai_utils.generate_image_from_prompt(visual_description)
+        logging.debug(f"Image generated: {len(image_base64)} chars")
+        
+        # Create data URL for frontend
+        image_url = f"data:image/png;base64,{image_base64}"
 
-        return jsonify({"visual_description": visual_description, "image_url": image_url})
+        return jsonify({"visual_description": visual_description, "image_url": image_url, "image_base64": image_base64})
     except Exception as e:
         logging.error(f"Error in generate_image_route: {str(e)}")
         return jsonify({"error": str(e)}), 500
@@ -248,20 +257,45 @@ def upload_image_to_spotify(playlist_id):
     if not access_token:
         return jsonify({"error": "No access token found"}), 401
 
+    print(f"Upload request keys: {list(request.json.keys()) if request.json else 'None'}")
+    
+    # Handle both image_base64 and image_url (data URL format)
+    image_base64 = request.json.get('image_base64')
     image_url = request.json.get('image_url')
-    if not image_url:
-        return jsonify({"error": "No image URL provided"}), 400
+    
+    if image_base64:
+        # Direct base64 data
+        print("Using direct base64 data")
+    elif image_url and image_url.startswith('data:image/'):
+        # Extract base64 from data URL
+        image_base64 = image_url.split(',')[1]
+        print("Extracted base64 from data URL")
+    else:
+        return jsonify({"error": "No valid image data provided"}), 400
 
     try:
-        image_base64 = utils.convert_image_to_base64(image_url)
-        logging.debug(f"Image size after compression: {len(image_base64) // 1024} KB")
-        result = utils.upload_to_spotify(playlist_id, image_base64, access_token)
+        print(f"Original base64 length: {len(image_base64)}")
+        
+        # Decode base64 to get image bytes for compression
+        image_bytes = base64.b64decode(image_base64)
+        print(f"Image bytes length: {len(image_bytes)}")
+        
+        # Compress the image
+        compressed_image = utils.compress_image(image_bytes)
+        print(f"Compressed image bytes length: {len(compressed_image)}")
+        
+        # Re-encode to base64
+        compressed_base64 = base64.b64encode(compressed_image).decode('utf-8')
+        print(f"Compressed base64 length: {len(compressed_base64)}")
+        
+        logging.debug(f"Image size after compression: {len(compressed_base64) // 1024} KB")
+        result = utils.upload_to_spotify(playlist_id, compressed_base64, access_token)
         if result.status_code == 202:
             return jsonify({"success": True, "message": "Image upload accepted by Spotify"}), 202
         else:
             return jsonify({"error": "Failed to upload image to Spotify", "details": result.text}), result.status_code
     except Exception as e:
-        print(f"Error uploading image: {str(e)}")
+        logging.error(f"Error uploading image: {str(e)}")
         return jsonify({"error": str(e)}), 500
 
 @app.route('/download_image')
@@ -286,4 +320,3 @@ def proxy_image():
 
 # if __name__ == '__main__':
 #     app.run(debug=True)
-    # app.run(host='0.0.0.0', debug=True, use_reloader=True)

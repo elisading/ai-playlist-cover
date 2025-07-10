@@ -27,6 +27,32 @@
             margin-bottom: 10px; 
             display: flex;
             align-items: center;
+            position: relative;
+        }
+        .back-button {
+            position: absolute;
+            left: -60px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 24px;
+            line-height: 1;
+            color: #222;
+            width: 40px;
+            height: 40px;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: all 0.2s;
+            font-weight: bold;
+        }
+        .back-button:hover {
+            background-color: rgba(0, 0, 0, 0.15);
+            transform: translateY(-50%) scale(1.1);
         }
         .subtitle { 
             font-size: 24px; 
@@ -148,12 +174,39 @@
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
+        .theme-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        .theme-btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 20px;
+            cursor: pointer;
+            font-family: 'Merriweather', serif;
+            font-size: 12px;
+            font-weight: 400;
+            transition: all 0.3s ease;
+            background-color: #f2a450;
+            color: white;
+        }
+        .theme-btn.active {
+            background-color: #ea86a0;
+        }
+        .theme-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <header class="header">
             <h1 class="title">
+                <button class="back-button" onclick="window.history.back()" title="Back to playlists">
+                    ‹
+                </button>
                 <img src="{{ url_for('static', filename='audiart_icon.png') }}" alt="Audiart Icon" style="width: 40px; height: 40px; margin-right: 10px;">
                 audiart
                 <div class="warning-box">
@@ -209,6 +262,11 @@
                     </div>
                     <div class="playlist-info">
                         <h3 class="playlist-title">yassified {{ playlist_name }}</h3>
+                        <div class="theme-buttons">
+                            <button class="theme-btn active" data-theme="abstract">abstract</button>
+                            <button class="theme-btn" data-theme="photorealistic">photorealistic</button>
+                            <button class="theme-btn" data-theme="ghibli">ghibli</button>
+                        </div>
                     </div>
                 </div>
                 <div class="playlist-card">

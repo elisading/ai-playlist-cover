@@ -7,6 +7,20 @@ document.addEventListener('DOMContentLoaded', function() {
     const visualDescription = document.getElementById('visualDescription');
     const catGif = document.getElementById('catGif');
     const catGifs = ['cats1.gif', 'cats2.gif', 'cats3.gif', 'cats4.gif', 'cats5.gif', 'cats6.gif', 'cats7.gif'];
+    const themeButtons = document.querySelectorAll('.theme-btn');
+    let selectedTheme = 'abstract';
+
+    // Theme button functionality
+    themeButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            // Remove active class from all buttons
+            themeButtons.forEach(btn => btn.classList.remove('active'));
+            // Add active class to clicked button
+            this.classList.add('active');
+            // Update selected theme
+            selectedTheme = this.dataset.theme;
+        });
+    });
 
     generateButton.addEventListener('click', function() {
         const playlistId = this.dataset.playlistId;
@@ -15,6 +29,11 @@ document.addEventListener('DOMContentLoaded', function() {
         const randomCat = catGifs[Math.floor(Math.random() * catGifs.length)];
         catGif.src = `/static/${randomCat}`;
         
+        // Show loading state on button
+        const originalText = generateButton.textContent;
+        generateButton.disabled = true;
+        generateButton.textContent = 'generating... 🪄';
+        
         // Show loader, hide existing image
         catLoader.style.display = 'block';
         aiImage.style.display = 'none';
@@ -22,7 +41,13 @@ document.addEventListener('DOMContentLoaded', function() {
         uploadButton.style.display = 'none';
         
         
-        fetch(`/playlists/${playlistId}/generate_image`, { method: 'POST' })
+        fetch(`/playlists/${playlistId}/generate_image`, { 
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ theme: selectedTheme })
+        })
             .then(response => response.json())
             .then(data => {
                 // Hide loader, show new image
@@ -40,6 +65,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 console.error('Error:', error);
                 catLoader.style.display = 'none';
                 alert('An error occurred while generating the image. Please try again.');
+            })
+            .finally(() => {
+                // Reset button state
+                generateButton.disabled = false;
+                generateButton.textContent = originalText;
             });
     });
 
@@ -55,6 +85,13 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 function uploadImageToSpotify(playlistId, imageUrl) {
+    const uploadButton = document.getElementById('uploadToSpotify');
+    const originalText = uploadButton.textContent;
+    
+    // Show loading state
+    uploadButton.disabled = true;
+    uploadButton.innerHTML = '<span class="spinner"></span> Uploading...';
+    
     fetch(`/playlists/${playlistId}/upload_image`, {
         method: 'POST',
         headers: {
@@ -65,7 +102,7 @@ function uploadImageToSpotify(playlistId, imageUrl) {
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            alert('Image successfully uploaded to Spotify!');
+            showToast('🎶💫 Uploaded to Spotify!');
         } else {
             alert('Failed to upload image to Spotify. Please try again.');
         }
@@ -73,26 +110,81 @@ function uploadImageToSpotify(playlistId, imageUrl) {
     .catch(error => {
         console.error('Error:', error);
         alert('An error occurred while uploading the image. Please try again.');
+    })
+    .finally(() => {
+        // Reset button state
+        uploadButton.disabled = false;
+        uploadButton.textContent = originalText;
     });
 }
 
 function downloadImageDirectly(imageUrl) {
-    const proxyUrl = `/proxy_image?url=${encodeURIComponent(imageUrl)}`;
-    fetch(proxyUrl)
-        .then(response => response.blob())
-        .then(blob => {
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.style.display = 'none';
-            a.href = url;
-            a.download = 'playlist_cover.jpg';
-            document.body.appendChild(a);
-            a.click();
-            setTimeout(() => {
-                window.URL.revokeObjectURL(url);
-            }, 100);
-        })
-        .catch(error => {
-            console.error('Failed to download the image:', error);
-        });
+    // Handle base64 data URLs
+    if (imageUrl.startsWith('data:image/')) {
+        const a = document.createElement('a');
+        a.style.display = 'none';
+        a.href = imageUrl;
+        a.download = 'playlist_cover.png';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+    } else {
+        // Handle regular URLs
+        const proxyUrl = `/proxy_image?url=${encodeURIComponent(imageUrl)}`;
+        fetch(proxyUrl)
+            .then(response => response.blob())
+            .then(blob => {
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.style.display = 'none';
+                a.href = url;
+                a.download = 'playlist_cover.jpg';
+                document.body.appendChild(a);
+                a.click();
+                setTimeout(() => {
+                    window.URL.revokeObjectURL(url);
+                }, 100);
+            })
+            .catch(error => {
+                console.error('Failed to download the image:', error);
+            });
+    }
+}
+
+function showToast(message) {
+    // Create toast element
+    const toast = document.createElement('div');
+    toast.textContent = message;
+    toast.style.cssText = `
+        position: fixed;
+        top: 20px;
+        left: 50%;
+        transform: translateX(-50%) translateY(-100%);
+        background: #1db954;
+        color: white;
+        padding: 15px 20px;
+        border-radius: 8px;
+        font-size: 16px;
+        font-weight: bold;
+        z-index: 1000;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        transition: transform 0.3s ease;
+    `;
+    
+    document.body.appendChild(toast);
+    
+    // Show toast (slide down from top)
+    setTimeout(() => {
+        toast.style.transform = 'translateX(-50%) translateY(0)';
+    }, 100);
+    
+    // Hide toast after 3 seconds (slide back up)
+    setTimeout(() => {
+        toast.style.transform = 'translateX(-50%) translateY(-100%)';
+        setTimeout(() => {
+            if (toast.parentNode) {
+                document.body.removeChild(toast);
+            }
+        }, 300);
+    }, 3000);
 }

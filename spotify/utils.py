@@ -51,9 +51,18 @@ def upload_to_spotify(playlist_id, image_base64, access_token):
         "Authorization": f"Bearer {access_token}",
         "Content-Type": "image/jpeg"
     }
+    
+    print(f"Upload attempt - Playlist ID: {playlist_id}")
+    print(f"Base64 data length: {len(image_base64)}")
+    print(f"Base64 data KB: {len(image_base64.encode('utf-8')) / 1024:.2f}")
+    
+    # Send base64 string as bytes
     response = requests.put(f"{API_BASE_URL}/playlists/{playlist_id}/images", headers=headers, data=image_base64.encode('utf-8'), verify=False)
-    print(f"Response Code: {response.status_code}")
-    print(f"Response Content: {response.text}")
+    
+    print(f"Spotify Response Code: {response.status_code}")
+    print(f"Spotify Response Headers: {response.headers}")
+    print(f"Spotify Response Content: {response.text}")
+    
     return response
 
 def compress_image(image_data, max_size_kb=256, initial_width=512, initial_height=512):
